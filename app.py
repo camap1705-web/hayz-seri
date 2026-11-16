@@ -4,8 +4,8 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (username TEXT PRIMARY KEY, password TEXT, face_id TEXT, display_name TEXT, avatar TEXT)''')
     try:
-      c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('t.bun', '1', '0001', 'Trưởng nhóm t.bun', '')")
-        c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('No2', '1', '0002', 'Đồng sáng lập No2', '')")
+    c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('t.bun', '1', '0001', 'Trưởng nhóm t.bun', '')")
+    c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('No2', '1', '0002', 'Đồng sáng lập No2', '')")
     except Exception:
         pass
     conn.commit()
