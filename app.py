@@ -1,3 +1,8 @@
+import sqlite3
+
+def init_db():
+    conn = sqlite3.connect("users_data.db")
+    # các câu lệnh bên dưới...
 def init_db():
     conn = sqlite3.connect("users_data.db")
     c = conn.cursor()
