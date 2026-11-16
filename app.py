@@ -1,9 +1,7 @@
+import streamlit as st
 import sqlite3
 
-def init_db():
-    conn = sqlite3.connect("users_data.db")
-    # các câu lệnh bên dưới...
-def init_db():
+def setup_initial_db():
     conn = sqlite3.connect("users_data.db")
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users
@@ -16,28 +14,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-init_db()
-
-     
-
+# Gọi hàm khởi tạo
 setup_initial_db()
 
-# Tự động cập nhật cấu trúc database cũ (thêm cột display_name, avatar nếu chưa có)
-try:
-    conn = sqlite3.connect("users_data.db")
-    c = conn.cursor()
-    c.execute("PRAGMA table_info(users)")
-    columns = [col[1] for col in c.fetchall()]
-    if "display_name" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
-    if "avatar" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN avatar TEXT")
-    conn.commit()
-    conn.close()
-    print("♻️ Đã cập nhật cấu trúc Database (Thêm Avatar & Tên hiển thị thành công)")
-except Exception as e:
-    print(f"⚠️ Lưu ý kiểm tra DB: {e}")
-
-# ==========================================
-# 1. TẠO FILE app.py HOÀN CHỈNH KHÔNG LỖI CÚ PHÁP
-# ==========================================
+st.title("AI Education KHKT")
+st.write("Hệ thống đang hoạt động ổn định!")
