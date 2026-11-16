@@ -1,101 +1,4 @@
-# ==============================================================================
-# HỆ THỐNG KHKT: SIÊU TỐC ĐỘ & ĐƯỜNG TRUYỀN NGROK CỐ ĐỊNH CHUẨN DOMAIN
-# (BẢO MẬT API KEY & CẬP NHẬT TÙY BIẾN AVATAR/TÊN HIỂN THỊ CHO HỌC VIÊN)
-# ==============================================================================
-
-
 import os
-import shutil
-import socket
-import sqlite3
-import subprocess
-import time
-import requests
-import json
-from pyngrok import conf, ngrok
-
-GEMINI_API_KEY_MOI = "AQ.Ab8RN6Jk9e00SH4I5fEjxL5E04eswduEQUMMGaylUo4VPZE-vg"
-AUTHTOKEN_MOI = "3LKGlsOWuXBl2L6LvUzw2FPoVUv_5reay1sZf6CZHrbmw6XaT"
-os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY_MOI
-
-# Avatar mặc định bằng SVG Base64
-DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%231E88E5'/><circle cx='50' cy='37' r='17' fill='%23FFFFFF'/><path d='M18,78 C18,60 32,54 50,54 C68,54 82,60 82,78 C82,85 75,90 50,90 C25,90 18,85 18,78 Z' fill='%23FFFFFF'/></svg>"
-
-# Khởi tạo DB cấu trúc hoàn chỉnh trước khi chạy ứng dụng
-def setup_initial_db():
-    conn = sqlite3.connect("users_data.db")
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        password TEXT,
-        face_id TEXT UNIQUE,
-        display_name TEXT,
-        avatar TEXT
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS exams (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT,
-        subject TEXT,
-        topic TEXT,
-        mode TEXT,
-        content TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS friends (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user1 TEXT,
-        user2 TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user1, user2)
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS chats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender TEXT,
-        receiver TEXT,
-        message TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS shared_exams (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender TEXT,
-        receiver TEXT,
-        subject TEXT,
-        topic TEXT,
-        mode TEXT,
-        content TEXT,
-        is_notified INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    try:
-        c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('t.bun', '1', '0001', 'Trưởng nhóm t.bun', '" + DEFAULT_AVATAR + "')")
-        c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('No2', '1', '0002', 'Đồng sáng lập No2', '" + DEFAULT_AVATAR + "')")
-    except Exception:
-        pass
-    conn.commit()
-    conn.close()
-
-setup_initial_db()
-
-# Tự động cập nhật cấu trúc database cũ (thêm cột display_name, avatar nếu chưa có)
-try:
-    conn = sqlite3.connect("users_data.db")
-    c = conn.cursor()
-    c.execute("PRAGMA table_info(users)")
-    columns = [col[1] for col in c.fetchall()]
-    if "display_name" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN display_name TEXT")
-    if "avatar" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN avatar TEXT")
-    conn.commit()
-    conn.close()
-    print("♻️ Đã cập nhật cấu trúc Database (Thêm Avatar & Tên hiển thị thành công)")
-except Exception as e:
-    print(f"⚠️ Lưu ý kiểm tra DB: {e}")
-
-# ==========================================
-# 1. TẠO FILE app.py HOÀN CHỈNH KHÔNG LỖI CÚ PHÁP
-# ==========================================
-app_source_code = """import os
 import time
 import json
 import sqlite3
@@ -212,14 +115,6 @@ def get_user_profile(username):
         }
     return {"display_name": username, "avatar": DEFAULT_AVATAR, "face_id": ""}
 
-def get_user_face_id(username):
-    conn = sqlite3.connect("users_data.db")
-    c = conn.cursor()
-    c.execute("SELECT face_id FROM users WHERE username = ?", (username,))
-    res = c.fetchone()
-    conn.close()
-    return res[0] if res else ""
-
 def find_user_by_face_id(face_id):
     conn = sqlite3.connect("users_data.db")
     c = conn.cursor()
@@ -314,10 +209,10 @@ def get_exams(username):
     conn.close()
     return res
 
-if \"authenticated\" not in st.session_state:
+if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
-    st.session_state.username = \"\"
-    st.session_state.face_id = \"\"
+    st.session_state.username = ""
+    st.session_state.face_id = ""
 
 # Giao diện Đăng nhập / Đăng ký
 if not st.session_state.authenticated:
@@ -363,12 +258,17 @@ else:
     for _, sender, s_subject, s_topic in unnotified:
         st.toast(f"✉️ {sender} vừa chia sẻ cho bạn đề thi môn {s_subject} về chủ đề {s_topic}! Hãy mở Tab LỊCH SỬ để xem.")
 
-    # Thiết kế Sidebar Profile siêu tối giản mới
-    profile_html = f'''<div style='display: flex; align-items: center; gap: 12px; margin-bottom: 15px;'>\\n        <img src="{prof['avatar']}" style='width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #1E88E5;' />\\n        <div>\\n            <h4 style='margin: 0; color: #1E88E5; font-size: 16px;'>{prof['display_name']}</h4>\\n            <code style='background-color: #f1f1f1; padding: 1px 4px; border-radius: 4px; font-size: 11px;'>ID: {prof['face_id']}</code>\\n        </div>\\n    </div>'''
+    # Thiết kế Sidebar Profile
+    profile_html = f'''<div style='display: flex; align-items: center; gap: 12px; margin-bottom: 15px;'>
+        <img src="{prof['avatar']}" style='width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #1E88E5;' />
+        <div>
+            <h4 style='margin: 0; color: #1E88E5; font-size: 16px;'>{prof['display_name']}</h4>
+            <code style='background-color: #f1f1f1; padding: 1px 4px; border-radius: 4px; font-size: 11px;'>ID: {prof['face_id']}</code>
+        </div>
+    </div>'''
     st.sidebar.markdown(profile_html, unsafe_allow_html=True)
     st.sidebar.markdown("---")
 
-    # Phần chỉnh sửa hồ sơ
     with st.sidebar.expander("⚙️ Chỉnh sửa hồ sơ cá nhân"):
         new_name = st.text_input("Thay đổi tên hiển thị:", value=prof["display_name"])
         uploaded_avatar = st.file_uploader("Tải ảnh đại diện mới (.png, .jpg, .jpeg):", type=["png", "jpg", "jpeg"])
@@ -398,9 +298,7 @@ else:
         st.session_state.face_id = ""
         st.rerun()
 
-    # ==========================================
-    # TÍNH NĂNG KẾT BẠN & TRÒ CHUYỆN Ở SIDEBAR
-    # ==========================================
+    # Mạng xã hội học tập ở sidebar
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 💬 MẠNG XÃ HỘI HỌC TẬP")
 
@@ -413,7 +311,7 @@ else:
                     st.success(f"Đã kết bạn thành công với {target_user}!")
                     st.rerun()
                 else:
-                    st.info(f"Hai bạn đã là bạn bè hoặc đây là Face ID của chính bạn!")
+                    st.info("Hai bạn đã là bạn bè hoặc đây là Face ID của chính bạn!")
             else:
                 st.error("Không tìm thấy người dùng nào với mã Face ID này!")
 
@@ -436,7 +334,7 @@ else:
         chat_container = ""
         for sender, message, _ in chat_history[-10:]:
             align = "Tôi" if sender == st.session_state.username else target_prof['display_name']
-            chat_container += f"**{align}**: {message}\\n\\n"
+            chat_container += f"**{align}**: {message}\n\n"
 
         st.sidebar.markdown(chat_container if chat_container else "*Hãy gửi tin nhắn đầu tiên...*")
 
@@ -453,7 +351,7 @@ else:
         client = genai.Client(api_key=key)
         full_input = prompt
         if system_prompt:
-            full_input = f"[QUY TẮC BẮT BUỘC]: {system_prompt}\\n\\n{prompt}"
+            full_input = f"[QUY TẮC BẮT BUỘC]: {system_prompt}\n\n{prompt}"
 
         cac_models = ["gemini-2.5-flash", "gemini-2.5-flash"]
         last_exception = None
@@ -492,38 +390,38 @@ else:
             thang_diem = st.selectbox("Mục tiêu Thang điểm đạt:", ["7đ", "8đ", "9đ", "10đ"])
 
         system_inst = '''Bạn là chuyên gia biên soạn đề thi chuẩn học thuật cực kỳ trực quan. Hãy trả về kết quả dưới định dạng JSON duy nhất. Không thêm bất kỳ văn bản giải thích nào ngoài chuỗi JSON.
-Format JSON cấu trúc như sau:
-{
-  "questions": [
-     {
-       "id": 1,
-       "type": "choice",
-       "text": "Câu hỏi...",
-       "options": ["A. Phương án 1", "B. Phương án 2", "C. Phương án 3", "D. Phương án 4"],
-       "correct_answer": "A",
-       "image_desc": "Mô tả hình vẽ hoặc đồ thị cụ thể để minh họa cho bài toán"
-     },
-     {
-       "id": 2,
-       "type": "true_false",
-       "text": "Khẳng định cần đánh giá...",
-       "options": ["Đúng", "Sai"],
-       "correct_answer": "Đúng"
-     },
-     {
-       "id": 3,
-       "type": "short_answer",
-       "text": "Câu hỏi thực tế hoặc tính toán...",
-       "correct_answer": "Số hoặc chữ ngắn gọn"
-     }
-  ]
-}
+        Format JSON cấu trúc như sau:
+        {
+          "questions": [
+             {
+                "id": 1,
+                "type": "choice",
+                "text": "Câu hỏi...",
+                "options": ["A. Phương án 1", "B. Phương án 2", "C. Phương án 3", "D. Phương án 4"],
+                "correct_answer": "A",
+                "image_desc": "Mô tả hình vẽ hoặc đồ thị cụ thể để minh họa cho bài toán"
+             },
+             {
+                "id": 2,
+                "type": "true_false",
+                "text": "Khẳng định cần đánh giá...",
+                "options": ["Đúng", "Sai"],
+                "correct_answer": "Đúng"
+             },
+             {
+                "id": 3,
+                "type": "short_answer",
+                "text": "Câu hỏi thực tế hoặc tính toán...",
+                "correct_answer": "Số hoặc chữ ngắn gọn"
+             }
+          ]
+        }
 
-[QUY TẮC BẮT BUỘC ĐỂ KHÔNG BAO GIỜ TRÙNG ĐỀ THI]:
-1. Thay đổi toàn diện: Bạn phải thay đổi hoàn toàn nội dung, các trị số toán học so với các phiên bản trước.
-2. Thiết kế thông minh với các số liệu ngẫu nhiên khác nhau rõ rệt.
-3. Đối với loại câu hỏi "choice", trường "correct_answer" BẮT BUỘC chỉ được chứa đúng duy nhất 1 ký tự chữ cái viết hoa đại diện là "A" hoặc "B" hoặc "C" hoặc "D".
-4. Tránh lỗi font và ký tự lạ: Tuyệt đối không sử dụng các ký tự toán học LaTeX phức tạp. Các biểu thức toán học phải được viết dưới dạng ký tự đơn giản, rõ chữ.'''
+        [QUY TẮC BẮT BUỘC ĐỂ KHÔNG BAO GIỜ TRÙNG ĐỀ THI]:
+        1. Thay đổi toàn diện: Bạn phải thay đổi hoàn toàn nội dung, các trị số toán học so với các phiên bản trước.
+        2. Thiết kế thông minh với các số liệu ngẫu nhiên khác nhau rõ rệt.
+        3. Đối với loại câu hỏi "choice", trường "correct_answer" BẮT BUỘC chỉ được chứa đúng duy nhất 1 ký tự chữ cái viết hoa đại diện là "A" hoặc "B" hoặc "C" hoặc "D".
+        4. Tránh lỗi font và ký tự lạ: Tuyệt đối không sử dụng các ký tự toán học LaTeX phức tạp. Các biểu thức toán học phải được viết dưới dạng ký tự đơn giản, rõ chữ.'''
 
         if st.button("🚀 TẠO ĐỀ THI NGAY", use_container_width=True):
             with st.spinner("AI đang soạn đề thi mới lạ, vui lòng chờ trong giây lát..."):
@@ -621,8 +519,8 @@ Format JSON cấu trúc như sau:
             else:
                 with st.spinner("AI đang đọc và tổng hợp..."):
                     try:
-                        nd = "".join([f"\\n--- {f.name} ---\\n" + f.read().decode("utf-8", errors="ignore") for f in files])
-                        prompt = f"Trích xuất nhanh các công thức, định nghĩa và mẹo giải quan trọng từ tài liệu sau:\\n\\n{nd[:10000]}"
+                        nd = "".join([f"\n--- {f.name} ---\n" + f.read().decode("utf-8", errors="ignore") for f in files])
+                        prompt = f"Trích xuất nhanh các công thức, định nghĩa và mẹo giải quan trọng từ tài liệu sau:\n\n{nd[:10000]}"
                         res = goi_ai_sieu_toc(prompt)
                         st.success("✅ Trích xuất hoàn thành!")
                         st.markdown(res)
@@ -672,54 +570,3 @@ Format JSON cấu trúc như sau:
                                 st.success("Đã nạp đề thi từ bạn bè! Hãy chuyển sang Tab 1 để làm bài ngay.")
                             except Exception:
                                 st.markdown(c)
-"""
-
-# Ghi file app.py
-with open("app.py", "w", encoding="utf-8") as f:
-    f.write(app_source_code)
-print("✅ Ghi file app.py thành công!")
-
-# KHỞI CHẠY STREAMLIT & NGROK
-ngrok.kill()
-try:
-    ngrok.set_auth_token(AUTHTOKEN_MOI)
-except Exception as auth_err:
-    print("ℹ️ Authtoken đã được lưu cấu hình trước đó, bỏ qua bước đăng ký mới.")
-
-print("⚙️ Đang khởi chạy ứng dụng Streamlit...")
-process = subprocess.Popen(["streamlit", "run", "app.py", "--server.port", "8501", "--server.address", "0.0.0.0"],
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-# Tăng thời gian chờ đợi lên 10 giây để đảm bảo Streamlit khởi động hoàn tất trước khi mở cổng
-time.sleep(10)
-
-try:
-    public_url = ngrok.connect(8501)
-    print("\n======================================================================")
-    print("⚡ ĐÃ THIẾT LẬP LINK TRANG WEB THÀNH CÔNG!")
-    print(f"🔗 Link truy cập của bạn ở đây: {public_url.public_url}")
-    print("======================================================================")
-except Exception as e:
-    print(f"❌ Lỗi khi thiết lập ngrok: {e}")
-
-import streamlit as st
-import sqlite3
-
-def setup_initial_db():
-    conn = sqlite3.connect("users_data.db")
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (username TEXT PRIMARY KEY, password TEXT, face_id TEXT, display_name TEXT, avatar TEXT)''')
-    try:
-        c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('t.bun', '1', '0001', 'Trưởng nhóm t.bun', '')")
-        c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('No2', '1', '0002', 'Đồng sáng lập No2', '')")
-    except Exception:
-        pass
-    conn.commit()
-    conn.close()
-
-# Gọi hàm khởi tạo
-setup_initial_db()
-
-st.title("AI Education KHKT")
-st.write("Hệ thống đang hoạt động ổn định!")
