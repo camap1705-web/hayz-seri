@@ -1,5 +1,5 @@
 
-    try:
+
         c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('t.bun', '1', '0001', 'Trưởng nhóm t.bun', '" + DEFAULT_AVATAR + "')")
         c.execute("INSERT OR IGNORE INTO users (username, password, face_id, display_name, avatar) VALUES ('No2', '1', '0002', 'Đồng sáng lập No2', '" + DEFAULT_AVATAR + "')")
     except Exception:
