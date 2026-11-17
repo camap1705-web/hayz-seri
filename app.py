@@ -460,7 +460,7 @@ else:
         if system_prompt:
             full_input = f"[QUY TẮC BẮT BUỘC]: {system_prompt}\\n\\n{prompt}"
 
-        cac_models = ["gemini-3.8-flash"]
+        cac_models = ["gemini-2.5-flash"]
         last_exception = None
 
         for m_name in cac_models:
