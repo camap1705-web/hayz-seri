@@ -29,7 +29,7 @@ def goi_ai_sieu_toc(prompt, system_prompt=None):
         config["system_instruction"] = system_prompt
         
     response = client.models.generate_content(
-        model='gemini-3.8-flash',
+        model='gemini-2.5-flash',
         contents=prompt,
         config=config if config else None
     )
@@ -51,6 +51,13 @@ def init_db():
                     user2 TEXT,
                     UNIQUE(user1, user2)
                 )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS exam_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT,
+                    subject TEXT,
+                    exam_data TEXT,
+                    timestamp TEXT
+                )''')
     conn.commit()
     conn.close()
 
@@ -62,7 +69,7 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state["username"] = "t.bun"
 
-# Giao diện chính hiển thị các tab chức năng
+# Khung giao diện chính với các tab chức năng đầy đủ
 tab1, tab2, tab4 = st.tabs(["📝 THI THỬ TRỰC TUYẾN", "📚 CHẮT LỌC TÀI LIỆU", "📂 LỊCH SỬ ĐỀ THI & CHIA SẺ"])
 
 with tab1:
@@ -98,14 +105,56 @@ with tab1:
                 st.session_state["current_exam"] = parsed_exam
                 st.session_state["answers_submitted"] = False
                 st.session_state["user_answers"] = {}
-                st.success("✅ Đã tạo đề thi thành công! Nhắn vào các câu hỏi bên dưới để làm bài thi trực tiếp.")
+                
+                # Lưu vào lịch sử database
+                conn = sqlite3.connect("users_data.db")
+                c = conn.cursor()
+                c.execute("INSERT INTO exam_history (username, subject, exam_data, timestamp) VALUES (?, ?, ?, ?)",
+                          (st.session_state["username"], mon, json.dumps(parsed_exam, ensure_ascii=False), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                conn.commit()
+                conn.close()
+
+                st.success("✅ Đã tạo đề thi thành công! Kéo xuống dưới hoặc chuyển tab để làm bài.")
             except Exception as e:
-                st.error(f"Trạng thái tạo đề: {e}")
+                st.error(f"Lỗi khi tạo đề: {e}")
+
+    # Hiển thị đề thi hiện tại nếu đã được tạo
+    if "current_exam" in st.session_state and st.session_state["current_exam"]:
+        st.markdown("---")
+        st.subheader("📄 Đề Thi Hiện Tại")
+        st.json(st.session_state["current_exam"])
 
 with tab2:
     st.header("📚 Chắt Lọc Tài Liệu Học Tập")
-    st.info("Khu vực tra cứu và tổng hợp lý thuyết thông minh.")
+    st.info("Khu vực tra cứu, tổng hợp lý thuyết và tài liệu ôn tập thông minh cho dự án KHKT.")
+    
+    # Khu vực tìm kiếm tài liệu
+    keyword_tai_lieu = st.text_input("Tìm kiếm lý thuyết hoặc công thức trọng tâm:")
+    if keyword_tai_lieu:
+        with st.spinner("Đang chắt lọc tài liệu..."):
+            prompt_tl = f"Tổng hợp kiến thức trọng tâm ngắn gọn về: {keyword_tai_lieu}"
+            ket_qua_tl = goi_ai_sieu_toc(prompt_tl)
+            st.markdown(ket_qua_tl)
 
 with tab4:
     st.header("📂 Lịch Sử Đề Thi & Chia Sẻ Mạng Xã Hội")
-    st.info("Xem lại các đề thi đã lưu và chia sẻ kết quả với bạn bè.")
+    st.info("Danh sách các đề thi bạn đã từng tạo và lưu trữ trên hệ thống:")
+    
+    try:
+        conn = sqlite3.connect("users_data.db")
+        c = conn.cursor()
+        c.execute("SELECT subject, exam_data, timestamp FROM exam_history WHERE username = ? ORDER BY id DESC", (st.session_state["username"],))
+        history_rows = c.fetchall()
+        conn.close()
+        
+        if history_rows:
+            for idx, (sub, edata, ts) in enumerate(history_rows):
+                with st.expander(f"📌 Đề môn {sub} - Tạo lúc: {ts}"):
+                    st.text(f"Môn học: {sub} | Thời gian: {ts}")
+                    if st.button(f"Tải lại đề này #{idx}", key=f"load_hist_{idx}"):
+                        st.session_state["current_exam"] = json.loads(edata)
+                        st.success("Đã tải lại đề thi vào tab Thi Thử!")
+        else:
+            st.write("Chưa có lịch sử đề thi nào được lưu.")
+    except Exception as e:
+        st.write("Đang khởi tạo cơ sở dữ liệu lịch sử...")
