@@ -11,7 +11,7 @@ import subprocess
 import time
 import requests
 import json
-from pyngrok import conf, ngrok
+AUTHTOKEN_MOI = "..."
 
 GEMINI_API_KEY_MOI = "AQ.Ab8RN6Jk9e00SH4I5fEjxL5E04eswduEQUMMGaylUo4VPZE-vg"
 AUTHTOKEN_MOI = "3LKGlsOWuXBl2L6LvUzw2FPoVUv_5reay1sZf6CZHrbmw6XaT"
