@@ -346,7 +346,7 @@ else:
                 st.rerun()
 
   
-      def goi_ai_sieu_toc(prompt, system_prompt=None):
+def goi_ai_sieu_toc(prompt, system_prompt=None):
     if isinstance(prompt, str):
         prompt = prompt.encode("utf-8", errors="ignore").decode("utf-8")
     if system_prompt and isinstance(system_prompt, str):
