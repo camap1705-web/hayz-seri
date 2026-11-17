@@ -351,6 +351,10 @@ def goi_ai_sieu_toc(prompt, system_prompt=None):
         prompt = prompt.encode("utf-8", errors="ignore").decode("utf-8")
     if system_prompt and isinstance(system_prompt, str):
         system_prompt = system_prompt.encode("utf-8", errors="ignore").decode("utf-8")
+    if isinstance(prompt, str):
+        prompt = prompt.encode("utf-8", errors="ignore").decode("utf-8")
+    if system_prompt and isinstance(system_prompt, str):
+        system_prompt = system_prompt.encode("utf-8", errors="ignore").decode("utf-8")
         
     key = api_key_input
     if not key:
