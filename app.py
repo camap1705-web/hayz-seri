@@ -2,7 +2,6 @@
 # HỆ THỐNG KHKT: SIÊU TỐC ĐỘ & ĐƯỜNG TRUYỀN NGROK CỐ ĐỊNH CHUẨN DOMAIN
 # (BẢO MẬT API KEY & CẬP NHẬT TÙY BIẾN AVATAR/TÊN HIỂN THỊ CHO HỌC VIÊN)
 # ==============================================================================
-!pip install -q pyngrok streamlit google-genai
 
 import os
 import shutil
