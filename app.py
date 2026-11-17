@@ -1,5 +1,4 @@
-open(..., "w", encoding="utf-8")
-open(..., "r", encoding="utf-8")
+
 import os
 import time
 import json
