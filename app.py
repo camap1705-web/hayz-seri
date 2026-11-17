@@ -345,7 +345,17 @@ else:
                 send_chat_message(st.session_state.username, target_chat, new_msg)
                 st.rerun()
 
-    def goi_ai_sieu_toc(prompt, system_prompt=None):
+  
+      def goi_ai_sieu_toc(prompt, system_prompt=None):
+    if isinstance(prompt, str):
+        prompt = prompt.encode("utf-8", errors="ignore").decode("utf-8")
+    if system_prompt and isinstance(system_prompt, str):
+        system_prompt = system_prompt.encode("utf-8", errors="ignore").decode("utf-8")
+        
+    key = api_key_input
+    if not key:
+        raise Exception("Hệ thống chưa tìm thấy Gemini API Key khả dụng. Vui lòng liên hệ quản trị viên!")
+    # ... (các đoạn code phía dưới giữ nguyên)
         key = api_key_input
         if not key:
             raise Exception("Hệ thống chưa tìm thấy Gemini API Key khả dụng. Vui lòng liên hệ quản trị viên!")
